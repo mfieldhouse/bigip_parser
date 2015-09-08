@@ -15,12 +15,12 @@ class QuickParser < Parslet::Parser
 
   rule(:string)           { (word >> str(" ").maybe).repeat(1)}
   rule(:word)             { match('[\w!-:]').repeat(1) >> str(" ").maybe }
-  rule(:generic_line)     { (match('[\w!-:{}]').repeat(1) >> str(" ").maybe).repeat(1)}
+  rule(:generic_line)     { space? >> (match('[\w!-:{}]').repeat(1) >> str(" ").maybe).repeat(1)}
 
   rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline).repeat(1) }
 
   rule(:virtual)          { str('virtual ') >> word.as(:virtual_name) >> 
-                            space? >> str("{") >> space >> lines >> str('}') >> newline }
+                            space? >> str("{") >> space >> lines >> str("}") >> newline }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   
   
@@ -30,17 +30,10 @@ test_string = <<-END
 test
 # blah config what is this shit
 {}
-fill it 
-two
-virtual onephonebookapisaml.prod.http {
-   destination 10.120.13.235:http
-   snatpool onephonebookapisaml.prod.http.snatpool
-   ip protocol tcp
-   profile fastL4
-   mask 255.255.255.0
-   persist source_addr_20mins
-   pool onephonebookapisaml.prod.http.pool
+fill it {
+  here is
 }
+two
 END
 
 pp test_string

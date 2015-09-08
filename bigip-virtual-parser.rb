@@ -17,38 +17,16 @@ class QuickParser < Parslet::Parser
   rule(:word)             { match('[\w!-:]').repeat(1) >> str(" ").maybe }
   rule(:generic_line)     { space? >> (match('[\w!-:{}]').repeat(1) >> str(" ").maybe).repeat(1)}
 
-  rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline).repeat(1) }
+  rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline.maybe).repeat(1) }
 
   rule(:virtual)          { (str('virtual ') >> word.as(:name) >> 
-                            space? >> str("{") >> space >> lines >> str("}")).as(:virtual_server) >> newline }
+                            space? >> str("{") >> space >> lines >> str("}")).as(:virtual_server) >> newline.maybe }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   
   
 end
 
-test_string = <<-END
-test
-# blah config what is this shit
-{}##!""''test,test()(**)
-fill it {
-  here is
-}
-virtual gemini-dr-vs {
-   destination 10.120.12.219:8049
-   snatpool gemini-dr_snat
-   ip protocol tcp
-   pool gemini-dr_pool
-}
-virtual gemini-dr-vs {
-   destination 10.120.12.219:8049
-   snatpool gemini-dr_snat
-   ip protocol tcp
-   pool gemini-dr_pool
-}
-
-
-two
-END
+test_string = File.read('sample-config.txt')
 
 pp test_string
 pp QuickParser.new.parse_with_debug(test_string)

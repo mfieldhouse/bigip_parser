@@ -18,16 +18,9 @@ class QuickParser < Parslet::Parser
 end
 
 test_string = <<-END
-test
-two this is my line
-
+configuration one
 mask 255.255.255.0
-
-after the spaces
-
-
-theres a 
-test
+configuration two
 END
 
 pp test_string

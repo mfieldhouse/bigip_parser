@@ -36,3 +36,4 @@ END
 pp test_string
 pp QuickParser.new.parse_with_debug(test_string)
 
+test

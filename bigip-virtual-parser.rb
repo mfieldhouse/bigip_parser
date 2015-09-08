@@ -3,7 +3,9 @@ require 'parslet/convenience'
 require 'pp'
 
 class QuickParser < Parslet::Parser
-  root(:virtual)
+  root(:config)
+
+  rule(:config)           { (virtual | ignore).repeat }
 
   rule(:lines)            { line.repeat }
   rule(:line)             { (mask | string.as(:generic_option)) >> newline >> space? }
@@ -13,6 +15,9 @@ class QuickParser < Parslet::Parser
 
   rule(:string)           { (word >> str(" ").maybe).repeat(1)}
   rule(:word)             { match('[\w!-:]').repeat(1) >> str(" ").maybe }
+  rule(:generic_line)     { (match('[\w!-:{}]').repeat(1) >> str(" ").maybe).repeat(1)}
+
+  rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline).repeat(1) }
 
   rule(:virtual)          { str('virtual ') >> word.as(:virtual_name) >> 
                             space? >> str("{") >> space >> lines >> str('}') >> newline }
@@ -22,6 +27,11 @@ class QuickParser < Parslet::Parser
 end
 
 test_string = <<-END
+test
+# blah config what is this shit
+{}
+fill it 
+two
 virtual onephonebookapisaml.prod.http {
    destination 10.120.13.235:http
    snatpool onephonebookapisaml.prod.http.snatpool
@@ -35,5 +45,3 @@ END
 
 pp test_string
 pp QuickParser.new.parse_with_debug(test_string)
-
-test

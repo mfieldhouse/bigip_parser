@@ -6,13 +6,12 @@ class QuickParser < Parslet::Parser
   root(:lines)
 
   rule(:lines)            { line.repeat }
-  rule(:line)             { (test.as(:test) | mask | string.as(:generic_line)) >> newline >> space? }
+  rule(:line)             { (mask | string.as(:generic_line)) >> newline >> space? }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   rule(:newline)          { str("\n") }
 
   rule(:string)           { (word >> str(" ").maybe).repeat(1)}
   rule(:word)             { match('[\w!-:]').repeat(1) >> str(" ").maybe }
-  rule(:test)             { str('test') }
   
   rule(:space)            { match('\s').repeat(1) }
   rule(:space?)           { space.maybe }

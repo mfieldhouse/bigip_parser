@@ -1,5 +1,5 @@
-#Generic Parser
+#BIGIP Virtual Parser
 - Uses the parslet gem
-- Parses lines of text, each line is parsed as :generic_line
-- The parser can look for interesting lines. Lines starting 'mask ' are parsed as :mask. 
-- Use as a starting point for parsing configuration files or other structured data
+- Every line is parsed as :generic_line until the string 'virtual ' is reached
+- All known options inside the 'virtual { }' confiuguration block are parsed
+- Any unknown options are parsed as:generic_option

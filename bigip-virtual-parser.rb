@@ -19,8 +19,8 @@ class QuickParser < Parslet::Parser
 
   rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline).repeat(1) }
 
-  rule(:virtual)          { str('virtual ') >> word.as(:virtual_name) >> 
-                            space? >> str("{") >> space >> lines >> str("}") >> newline }
+  rule(:virtual)          { (str('virtual ') >> word.as(:name) >> 
+                            space? >> str("{") >> space >> lines >> str("}")).as(:virtual_server) >> newline }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   
   
@@ -29,10 +29,24 @@ end
 test_string = <<-END
 test
 # blah config what is this shit
-{}
+{}##!""''test,test()(**)
 fill it {
   here is
 }
+virtual gemini-dr-vs {
+   destination 10.120.12.219:8049
+   snatpool gemini-dr_snat
+   ip protocol tcp
+   pool gemini-dr_pool
+}
+virtual gemini-dr-vs {
+   destination 10.120.12.219:8049
+   snatpool gemini-dr_snat
+   ip protocol tcp
+   pool gemini-dr_pool
+}
+
+
 two
 END
 

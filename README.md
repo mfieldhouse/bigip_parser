@@ -37,3 +37,6 @@ end of every line, except for the last line where it may or may not be present.
 
 To account for this, 'newline.maybe' has been 
 added to rule(:generic_line) and rule(:virtual).
+
+###virtual_address rule
+Added to differentiate between virtual address and virtual server config blocks

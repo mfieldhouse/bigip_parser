@@ -5,10 +5,13 @@ require 'pp'
 class BIGIP_v9_Parser < Parslet::Parser
   root(:config)
 
-  rule(:config)           { (virtual | ignore).repeat }
+  rule(:config)           { (virtual_address | virtual | ignore).repeat }
 
   rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> lines >> str("}")).as(:virtual_server) >> newline.maybe }
+
+  rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
+                            space? >> str("{") >> space >> lines >> str("}")).as(:virtual_address) >> newline.maybe }
 
   rule(:lines)            { line.repeat }
   rule(:line)             { (mask | destination | ip_protocol | string.as(:generic_option)) >> newline >> space? }
@@ -32,4 +35,4 @@ parsed_config = BIGIP_v9_Parser.new.parse_with_debug(test_string)
 virtual_server_count = parsed_config.count
 puts "Virtual servers: #{virtual_server_count}"
 
-pp parsed_config[0]
+pp parsed_config

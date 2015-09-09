@@ -8,6 +8,12 @@
 - Known options are currently: 'mask'
 - All unknown options are parsed as:generic_option
 
+##Output
+Parsed output is formatted as an array of hashes containing an array of hashes.
+
+ - The first array contains each of the virtual servers as hashes.
+ - The second array contains each of the virtual server options as hashes.
+
 ##Development notes
 
 ###rule(:generic_line)

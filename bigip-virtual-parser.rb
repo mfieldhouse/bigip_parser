@@ -15,11 +15,11 @@ class QuickParser < Parslet::Parser
 
   rule(:string)           { (word >> str(" ").maybe).repeat(1)}
   rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe }
-  rule(:generic_line)     { space? >> (match('[\w!-:{}=]').repeat(1) >> str(" ").maybe).repeat(1)}
+  rule(:generic_line)     { any }
 
-  rule(:ignore)           { (str('virtual').absent? >> generic_line.as(:generic_line) >> newline.maybe).repeat(1) }
+  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
-  rule(:virtual)          { (str('virtual ') >> word.as(:name) >> 
+  rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> lines >> str("}")).as(:virtual_server) >> newline.maybe }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
@@ -28,6 +28,4 @@ class QuickParser < Parslet::Parser
 end
 
 test_string = File.read('sample-config.txt')
-
-pp test_string
 pp QuickParser.new.parse_with_debug(test_string)

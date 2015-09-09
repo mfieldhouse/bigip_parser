@@ -2,7 +2,7 @@ require 'parslet'
 require 'parslet/convenience'
 require 'pp'
 
-class QuickParser < Parslet::Parser
+class BIGIP_v9_Parser < Parslet::Parser
   root(:config)
 
   rule(:config)           { (virtual | ignore).repeat }
@@ -28,4 +28,4 @@ class QuickParser < Parslet::Parser
 end
 
 test_string = File.read('sample-config.txt')
-pp QuickParser.new.parse_with_debug(test_string)
+pp BIGIP_v9_Parser.new.parse_with_debug(test_string)

@@ -1,6 +1,7 @@
 require 'parslet'
 require 'parslet/convenience'
 require 'pp'
+require 'hashie'
 
 class BIGIP_v9_Parser < Parslet::Parser
   root(:config)
@@ -45,9 +46,30 @@ class Virtual_Parser
   def count
     @count = @parse.count
   end
+
+  def name
+    vip = self.parse[0]
+    vip.extend Hashie::Extensions::DeepFind
+    vip.deep_find :name
+  end
+
+  def destination
+    vip = self.parse[0]
+    vip.extend Hashie::Extensions::DeepFind
+    vip.deep_find :destination
+  end
 end
 
+config = Virtual_Parser.new('sample-config.txt')
+puts config.name
+puts config.destination
+puts config.count
 
-virtual = Virtual_Parser.new('sample-config.txt')
-pp virtual.parse
-pp virtual.count
+# v = vips[0]
+# v.extend Hashie::Extensions::DeepFind
+
+# puts v.deep_find :destination
+
+
+# puts "#{config.count} virtual servers found"
+

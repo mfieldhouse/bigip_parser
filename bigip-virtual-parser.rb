@@ -48,28 +48,21 @@ class Virtual_Parser
   end
 
   def name
-    vip = self.parse[0]
-    vip.extend Hashie::Extensions::DeepFind
-    vip.deep_find :name
+    vips = self.parse.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    vips.map { |x| x.deep_find :name }
   end
 
   def destination
-    vip = self.parse[0]
-    vip.extend Hashie::Extensions::DeepFind
-    vip.deep_find :destination
+    vips = self.parse.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    vips.map { |x| x.deep_find :destination }
   end
 end
 
 config = Virtual_Parser.new('sample-config.txt')
 puts config.name
 puts config.destination
-puts config.count
-
-# v = vips[0]
-# v.extend Hashie::Extensions::DeepFind
-
-# puts v.deep_find :destination
 
 
-# puts "#{config.count} virtual servers found"
 
+# puts config.destination
+# puts config.count

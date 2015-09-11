@@ -103,21 +103,15 @@ class Virtual_Parser
     output = []
     host   = @filename.gsub('')
     output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
-    # [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
   end
 end
 
-config = Virtual_Parser.new('sample-config.txt')
+config = Virtual_Parser.new('LDVSF4CS04_v9_bigip.conf')
 
-output_filename              = "output.csv"
-output_file                  = File.open(output_filename, "w")
+output_filename = "output.csv"
+output_file     = File.open(output_filename, "w")
 output_file.puts "Hostname,Virtual,IP,Mask,Port,Type,Protocol,State"
-
 
 config.parse.each do |line|
   output_file.puts line.to_csv
 end
-
-# Access the virtual server name
-# pp config.parse[0][:virtual_server][0][:name].class
-

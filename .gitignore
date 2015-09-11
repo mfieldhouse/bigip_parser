@@ -1,2 +1,8 @@
-sample-config.txt
-output.csv
+# Ignore everything
+
+*
+
+# But not these files
+
+!README.md
+!bigip-virtual-parser.rb

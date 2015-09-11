@@ -1,7 +1,7 @@
 require 'parslet'
 require 'parslet/convenience'
-require 'pp'
 require 'hashie'
+require 'pp'
 require 'csv'
 
 class BIGIP_v9_Parser < Parslet::Parser
@@ -39,6 +39,7 @@ class Virtual_Parser
   @output = []
 
   def initialize(config_filename)
+    @filename = config_filename
     @config = File.read(config_filename)
   end
 
@@ -100,14 +101,21 @@ class Virtual_Parser
 
   def build vip
     output = []
-    output << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
+    host   = @filename.gsub('')
+    output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
     # [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
   end
 end
 
 config = Virtual_Parser.new('sample-config.txt')
+
+output_filename              = "output.csv"
+output_file                  = File.open(output_filename, "w")
+output_file.puts "Hostname,Virtual,IP,Mask,Port,Type,Protocol,State"
+
+
 config.parse.each do |line|
-  puts line.to_csv
+  output_file.puts line.to_csv
 end
 
 # Access the virtual server name

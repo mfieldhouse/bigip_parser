@@ -42,8 +42,8 @@ class Virtual_Parser
 
   def parse
     @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
-    @vips = @vips.extend Hashie::Extensions::DeepFind
-    self
+    @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    build(@vips)
   end
 
   def count
@@ -94,13 +94,15 @@ class Virtual_Parser
     state.empty? ? "ENABLED_STATUS_ENABLED" : "ENABLED_STATUS_DISABLED"
   end
 
-  def build
-    [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
+  def build(vips)
+    pp vips
+    pp vips[0].respond_to? :deep_find
+    # [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
   end
 end
 
 config = Virtual_Parser.new('sample-config.txt')
-pp config.build
+config.parse
 
 # Access the virtual server name
 # pp config.parse[0][:virtual_server][0][:name].class

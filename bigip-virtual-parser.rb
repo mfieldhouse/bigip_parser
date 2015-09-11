@@ -35,6 +35,7 @@ end
 
 class Virtual_Parser
   attr_accessor :config, :parse, :name
+  @output = []
 
   def initialize(config_filename)
     @config = File.read(config_filename)
@@ -43,24 +44,24 @@ class Virtual_Parser
   def parse
     @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    build(@vips)
+    @vips.each { |vip| build(vip) }
   end
 
   def count
     @count = @vips.count
   end
 
-  def name  
-    @vips.deep_find(:name).to_s.gsub(' ', '')
+  def name vip
+    name = vip.deep_find(:name).to_s.gsub(' ', '')
   end
 
-  def ip
-    dest = @vips.deep_find :destination
+  def ip vip
+    dest = vip.deep_find :destination
     dest.to_s.split(':')[0]
   end
 
-  def mask
-    mask = @vips.deep_find(:mask).to_s
+  def mask vip
+    mask = vip.deep_find(:mask).to_s
     if mask.empty?
       "255.255.255.255"
     else
@@ -68,18 +69,18 @@ class Virtual_Parser
     end
   end
 
-  def port
-    dest = @vips.deep_find :destination
+  def port vip
+    dest = vip.deep_find :destination
     dest.to_s.split(':')[1]
   end
 
-  def type
-    ip_forward = @vips.deep_find(:ip_forward).to_s
+  def type vip
+    ip_forward = vip.deep_find(:ip_forward).to_s
     ip_forward.empty? ? "RESOURCE_TYPE_POOL" : "RESOURCE_TYPE_IP_FORWARDING"
   end
 
-  def protocol
-    protocol = @vips.deep_find(:ip_protocol).to_s
+  def protocol vip
+    protocol = vip.deep_find(:ip_protocol).to_s
     if protocol == "tcp"
       "PROTOCOL_TCP"
     elsif protocol == "udp"
@@ -89,14 +90,15 @@ class Virtual_Parser
     end
   end
 
-  def state
-    state = @vips.deep_find(:disabled).to_s
+  def state vip
+    state = vip.deep_find(:disabled).to_s
     state.empty? ? "ENABLED_STATUS_ENABLED" : "ENABLED_STATUS_DISABLED"
   end
 
-  def build(vips)
-    pp vips
-    pp vips[0].respond_to? :deep_find
+  def build vip
+    output = []
+    output << name(vip) << ip(vip) << mask(vip) 
+    pp output
     # [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
   end
 end

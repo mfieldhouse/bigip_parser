@@ -2,6 +2,7 @@ require 'parslet'
 require 'parslet/convenience'
 require 'pp'
 require 'hashie'
+require 'csv'
 
 class BIGIP_v9_Parser < Parslet::Parser
   root(:config)
@@ -44,7 +45,9 @@ class Virtual_Parser
   def parse
     @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    @vips.each { |vip| build(vip) }
+    final_output = []
+    @vips.each { |vip| final_output << build(vip) }
+    final_output
   end
 
   def count
@@ -97,14 +100,15 @@ class Virtual_Parser
 
   def build vip
     output = []
-    output << name(vip) << ip(vip) << mask(vip) 
-    pp output
+    output << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
     # [parse.name, parse.ip, parse.mask, parse.port, parse.type, parse.protocol, parse.state]
   end
 end
 
 config = Virtual_Parser.new('sample-config.txt')
-config.parse
+config.parse.each do |line|
+  puts line.to_csv
+end
 
 # Access the virtual server name
 # pp config.parse[0][:virtual_server][0][:name].class

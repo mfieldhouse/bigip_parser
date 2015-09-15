@@ -16,12 +16,13 @@ class BIGIP_v9_Parser < Parslet::Parser
                             space? >> str("{") >> space >> lines >> str("}")) >> newline.maybe }
 
   rule(:lines)            { line.repeat }
-  rule(:line)             { (mask | destination | ip_protocol | disabled | ip_forward | pool | string.as(:generic_option)) >> newline >> space? }
+  rule(:line)             { (mask | destination | ip_protocol | disabled | ip_forward | pool | profile | string.as(:generic_option)) >> newline >> space? }
   rule(:mask)             { (str('mask ') >> string.as(:mask)) }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
   rule(:ip_forward)       { str('ip forward').as(:ip_forward) }
   rule(:ip_protocol)      { (str('ip protocol ') >> string.as(:ip_protocol)) }
+  rule(:profile)          { (str('profile ') >> string.as(:profile)) }
   rule(:disabled)         { str('disable').as(:disabled) }
 
   rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
@@ -43,9 +44,12 @@ class Virtual_Parser
     @config = File.read(config_filename)
   end
 
+  # To debug parser - 'pp @vips'
+
   def parse
     @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    # pp @vips
     final_output = []
     @vips.each { |vip| final_output << build(vip) }
     final_output
@@ -94,6 +98,10 @@ class Virtual_Parser
     end
   end
 
+  def profile vip
+    profile = vip.deep_find(:profile).to_s
+  end
+
   def state vip
     state = vip.deep_find(:disabled).to_s
     state.empty? ? "ENABLED_STATUS_ENABLED" : "ENABLED_STATUS_DISABLED"
@@ -102,15 +110,16 @@ class Virtual_Parser
   def build vip
     output = []
     host   = @filename.gsub('')
-    output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
+    output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << profile(vip) << type(vip) << protocol(vip) << state(vip)
   end
 end
 
 config = Virtual_Parser.new('LDVSF4CS04_v9_bigip.conf')
+# config.parse
 
 output_filename = "output.csv"
 output_file     = File.open(output_filename, "w")
-output_file.puts "Hostname,Virtual,IP,Mask,Port,Type,Protocol,State"
+output_file.puts "Hostname,Virtual,IP,Mask,Port,Profile,Type,Protocol,State"
 
 config.parse.each do |line|
   output_file.puts line.to_csv

@@ -6,32 +6,41 @@ require 'csv'
 
 class BIGIP_v9_Parser < Parslet::Parser
   root(:config)
-  rule(:config)           { (virtual_address | virtual | pool_stanza | ignore).repeat }
+  rule(:config)           { (virtual_address | virtual | pool_stanza | snatpool_stanza | ignore).repeat }
 
   rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> virtual_options >> str("}")) >> newline.maybe }
 
   # BEGIN virtual server
   rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> generic_options >> str("}")).as(:virtual_server) >> newline.maybe }
+                            space? >> str("{") >> space >> virtual_options >> str("}")).as(:virtual_server) >> newline.maybe }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
   rule(:mask)             { (str('mask ') >> word.as(:mask)) }
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
   # END virtual server
 
+  # BEGIN snatpool
+  rule(:snatpool_stanza)  { (str('snatpool ') >> word.as(:name).repeat.maybe >> 
+                            space? >> str("{") >> space >> snatpool_options >> str("}")).as(:snatpool_stanza) >> newline.maybe }
+  rule(:snatpool_member)  { (str('member ') >> word.as(:snatpool_member)) }
+  # END snatpool
+
   # BEGIN pool
   rule(:pool_stanza)      { (str('pool ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> pool_options >> str("}")).as(:pool_stanza) >> newline.maybe }
-  rule(:member)           { (str('member ') >> word.as(:member)) }
+  rule(:pool_member)      { (str('member ') >> word.as(:pool_member)) }
   # END pool
+
+
 
   rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
 
   # rule(:lines)            { line.repeat }
   rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:pool_options)     { ((pool_member | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:snatpool_options) { ((snatpool_member | string.as(:generic_option)) >> newline >> space?).repeat }
   rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
   rule(:newline)          { str("\n") }
   rule(:space)            { match('\s').repeat(1) }

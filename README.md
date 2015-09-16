@@ -1,4 +1,4 @@
-#BIGIP Virtual Parser
+#bigip-virtual-parser.rb
 - Uses the parslet gem
 - Every line is parsed as :generic_line until the string 'virtual ' is reached. 
   The 'virtual { } configuration block and the options inside it are then 
@@ -40,3 +40,12 @@ added to rule(:generic_line) and rule(:virtual).
 
 ###virtual_address rule
 Added to differentiate between virtual address and virtual server config blocks
+
+#bigip-pool-parser.rb
+
+1. Find all virtuals, parse the options:
+..- name
+..- destination as IP and Port
+..- mask
+..- pool
+..- snatpool

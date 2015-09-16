@@ -52,3 +52,6 @@ Added to differentiate between virtual address and virtual server config blocks
 
 2. Parse all pools and the options:
 ..- member
+
+3. Parse all snatpools and the options:
+..-

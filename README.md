@@ -43,9 +43,12 @@ Added to differentiate between virtual address and virtual server config blocks
 
 #bigip-pool-parser.rb
 
-1. Find all virtuals, parse the options:
+1. Parse all virtuals and the options:
 ..- name
 ..- destination as IP and Port
 ..- mask
 ..- pool
 ..- snatpool
+
+2. Parse all pools and the options:
+..- member

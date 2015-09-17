@@ -63,7 +63,7 @@ class Virtual_Parser
   def parse
     @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    pp @vips
+    puts @vips
     final_output = []
     @vips.each { |vip| final_output << build(vip) }
     final_output

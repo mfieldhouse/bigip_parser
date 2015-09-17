@@ -58,4 +58,6 @@ Added to differentiate between virtual address and virtual server config blocks
 3. Parse all snatpools and the options:
 ..- member
 
-4. 
+4. For each virtual server, take the pool name, find the parsed pool and output the members.
+
+5. For each virtual server, take the snatpool name, find the parsed snatpool and output the members.

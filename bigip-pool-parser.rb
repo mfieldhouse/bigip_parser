@@ -49,7 +49,37 @@ class BIGIP_v9_Parser < Parslet::Parser
   rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
 end
 
-class Virtual_Parser
+class Virtual_Parser < Parslet::Parser
+  root(:config)
+  rule(:config)           { (virtual_address | virtual | ignore).repeat }
+
+  rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
+                            space? >> str("{") >> space >> virtual_options >> str("}")) >> newline.maybe }
+
+  # BEGIN virtual server
+  rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
+                            space? >> str("{") >> space >> virtual_options >> str("}")).as(:virtual_server) >> newline.maybe }
+  rule(:destination)      { (str('destination ') >> string.as(:destination)) }
+  rule(:mask)             { (str('mask ') >> word.as(:mask)) }
+  rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
+  rule(:pool)             { (str('pool ') >> string.as(:pool)) }
+  # END virtual server
+
+  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+
+  # rule(:lines)            { line.repeat }
+  rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:pool_options)     { ((pool_member | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:snatpool_options) { ((snatpool_member | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
+  rule(:newline)          { str("\n") }
+  rule(:space)            { match('\s').repeat(1) }
+  rule(:space?)           { space.maybe }
+  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
+  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
+end
+
+class BIGIP_Parser
   attr_accessor :config, :parse, :name
   @output = []
 
@@ -61,9 +91,9 @@ class Virtual_Parser
   # To debug parser - 'pp @vips'
 
   def parse
-    @vips = BIGIP_v9_Parser.new.parse_with_debug(@config)
+    @vips = Virtual_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    puts @vips
+    pp @vips
     final_output = []
     @vips.each { |vip| final_output << build(vip) }
     final_output
@@ -128,7 +158,7 @@ class Virtual_Parser
   end
 end
 
-config = Virtual_Parser.new('LDVSF4CS04_v9_bigip.conf')
+config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
 config.parse
 
 # output_filename = "output.csv"

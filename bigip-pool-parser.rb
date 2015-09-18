@@ -59,6 +59,7 @@ class Virtual_Parser < Parslet::Parser
   # BEGIN virtual server
   rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> virtual_options >> str("}")).as(:virtual_server) >> newline.maybe }
+  rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
   rule(:mask)             { (str('mask ') >> word.as(:mask)) }
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
@@ -66,8 +67,28 @@ class Virtual_Parser < Parslet::Parser
   # END virtual server
 
   rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+  rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
+  rule(:newline)          { str("\n") }
+  rule(:space)            { match('\s').repeat(1) }
+  rule(:space?)           { space.maybe }
+  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
+  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
+end
 
-  # rule(:lines)            { line.repeat }
+class Snatpool_Parser < Parslet::Parser
+  root(:config)
+  rule(:config)           { (snatpool_stanza | ignore).repeat }
+
+  # BEGIN snatpool
+  rule(:snatpool_stanza)  { begin_snatpool.present? >> (str('snatpool ') >> word.as(:name) >> 
+                            space? >> str("{") >> space >> snatpool_member >> str("}")).as(:snatpool_stanza) >> newline.maybe }
+  rule(:snatpool_member)  { ((str('member ') >> word.as(:snatpool_member)) >> newline >> space?).repeat.maybe }
+  # END snatpool
+
+  rule(:begin_snatpool )  { (str('snatpool ') >> word.as(:name) >> space? >> str("{")) }
+
+  rule(:ignore)           { (begin_snatpool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+
   rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
   rule(:pool_options)     { ((pool_member | string.as(:generic_option)) >> newline >> space?).repeat }
   rule(:snatpool_options) { ((snatpool_member | string.as(:generic_option)) >> newline >> space?).repeat }
@@ -88,12 +109,14 @@ class BIGIP_Parser
     @config = File.read(config_filename)
   end
 
-  # To debug parser - 'pp @vips'
-
   def parse
-    @vips = Virtual_Parser.new.parse_with_debug(@config)
-    @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    @vips  = Virtual_Parser.new.parse_with_debug(@config)
+    @snatpools = Snatpool_Parser.new.parse_with_debug(@config)
+    @vips  = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    puts "VIPs\n-----\n"
     pp @vips
+    puts "snatpools\n-----\n"
+    pp @snatpools
     final_output = []
     @vips.each { |vip| final_output << build(vip) }
     final_output

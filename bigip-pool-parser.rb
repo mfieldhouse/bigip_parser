@@ -116,17 +116,14 @@ class BIGIP_Parser
     @config = File.read(config_filename)
   end
 
-  def parse
-    @vips  = Virtual_Parser.new.parse_with_debug(@config)
+  def parse_vips
+    @vips      = Virtual_Parser.new.parse_with_debug(@config)
     @snatpools = Snatpool_Parser.new.parse_with_debug(@config)
-    @vips  = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    puts "VIPs\n-----\n"
-    pp @vips
-    puts "snatpools\n-----\n"
     pp @snatpools
-    final_output = []
-    @vips.each { |vip| final_output << build(vip) }
-    final_output
+    @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
+    @snatpool_list = []
+    @vips.each { |vip| @snatpool_list << snatpool(vip) }
+    @snatpool_list
   end
 
   def count
@@ -181,6 +178,10 @@ class BIGIP_Parser
     state.empty? ? "ENABLED_STATUS_ENABLED" : "ENABLED_STATUS_DISABLED"
   end
 
+  def snatpool vip
+    vip.deep_find(:snatpool).to_s
+  end
+
   def build vip
     output = []
     host   = @filename.gsub('')
@@ -189,7 +190,7 @@ class BIGIP_Parser
 end
 
 config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
-config.parse
+pp config.parse_vips
 
 # output_filename = "output.csv"
 # output_file     = File.open(output_filename, "w")

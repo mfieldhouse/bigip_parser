@@ -57,8 +57,10 @@ class Pool_Parser < Parslet::Parser
   rule(:begin_pool )      { (str('pool ') >> word.as(:name) >> space? >> str("{")) }
 
   rule(:pool_stanza)      { begin_pool.present? >> (str('pool ') >> word.as(:name) >> 
-                            space? >> str("{") >> space >> pool_member >> str("}")).as(:pool_stanza) >> newline.maybe }
-  rule(:pool_member)      { ((str('member ') >> word.as(:pool_member)) >> newline >> space?).repeat.maybe }
+                            space? >> str("{") >> space >> pool_options >> str("}")).as(:pool_stanza) >> newline.maybe }
+  rule(:member)           { (str('member ') >> word.as(:pool_member)) }
+
+  rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat }
 
   rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 

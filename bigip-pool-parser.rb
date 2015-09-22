@@ -187,31 +187,9 @@ class BIGIP_Parser
   end
 end
 
-def snatpool_name x
-  x[:snatpool_stanza][0][:name].to_s.gsub(' ', '')
-end
-
-def vip_snatpool_name vip
-  name = vip.deep_find(:snatpool).to_s.gsub(' ', '')
-end
-
-
-
-# out = config.parse_snatpools
-# pp Transformer.new.apply(out)
-
-# Get snatpool name from snatpool
-# config.parse_snatpools.each { |x| snatpool_name(x) }
-
-# Get snatpool name from virtual
-# config.parse_vips.each do |vip|
-#   snatpool_name = vip_snatpool_name(vip)
-#   puts snatpool_name
-
-def snatpool_members snatpool_name
-  config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
+def snatpool_members(snatpools, snatpool_name)
   members = []
-  config.parse_snatpools.each do |snatpool|
+  snatpools.each do |snatpool|
     snatpool[:snatpool_stanza].each do |x|
       a = x.values_at(:name) if !x.values_at(:name).empty? 
       name = a[0].to_s.strip
@@ -225,31 +203,9 @@ def snatpool_members snatpool_name
       end
     end
   end
-  members  # returns an array of members
+  members
 end
 
-pp snatpool_members("FTPLDN042_snat")[0].class
-
-# pp config.parse_snatpools[0][:snatpool_stanza].each { |x| puts x.values_at(:snatpool_member)  }
-
-
-
-# config.parse_snatpools.each do |snatpool|
-#  snatpool[:snatpool_stanza].each { |x| pp x.values_at(:snatpool_member)[0].to_s }
-#   end
-
-# snatpools = config.snatpools
-
-# snatpools.each { |x| pp snatpool_name(x) }
-
-
-
-# snatpools.each { |x| puts x[:snatpool_stanza][1]}
-
-# output_filename = "output.csv"
-# output_file     = File.open(output_filename, "w")
-# output_file.puts "Hostname,Virtual,IP,Mask,Port,Profile,Type,Protocol,State"
-
-# config.parse.each do |line|
-#   output_file.puts line.to_csv
-# end
+config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
+snatpools = config.parse_snatpools
+pp snatpool_members(snatpools,"sws-ldn-credit-5nc_snat")

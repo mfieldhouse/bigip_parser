@@ -195,7 +195,7 @@ def vip_snatpool_name vip
   name = vip.deep_find(:snatpool).to_s.gsub(' ', '')
 end
 
-config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
+
 
 # out = config.parse_snatpools
 # pp Transformer.new.apply(out)
@@ -208,24 +208,27 @@ config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
 #   snatpool_name = vip_snatpool_name(vip)
 #   puts snatpool_name
 
-config.parse_snatpools.each do |snatpool|
-  snatpool_members = []
-  snatpool[:snatpool_stanza].each do |x|
-    a = x.values_at(:name) if !x.values_at(:name).empty? 
-    name = a[0].to_s.strip
-    if name == "FTPLDN042_snat" 
-      snatpool[:snatpool_stanza].each do |x|
-        member = x.values_at(:snatpool_member)[0].to_s 
-        if ! member.empty?
-          snatpool_members << member
+def snatpool_members snatpool_name
+  config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
+  members = []
+  config.parse_snatpools.each do |snatpool|
+    snatpool[:snatpool_stanza].each do |x|
+      a = x.values_at(:name) if !x.values_at(:name).empty? 
+      name = a[0].to_s.strip
+      if name == snatpool_name 
+        snatpool[:snatpool_stanza].each do |x|
+          member = x.values_at(:snatpool_member)[0].to_s 
+          if ! member.empty?
+            members << member
+          end
         end
       end
     end
   end
-  pp snatpool_members
+  members  # returns an array of members
 end
 
-
+pp snatpool_members("FTPLDN042_snat")[0].class
 
 # pp config.parse_snatpools[0][:snatpool_stanza].each { |x| puts x.values_at(:snatpool_member)  }
 

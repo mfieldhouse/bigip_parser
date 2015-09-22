@@ -21,7 +21,7 @@ class Virtual_Parser < Parslet::Parser
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
   # END virtual server
 
-  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >>                        newline.maybe).repeat(1) }
+  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
   rule(:generic_options)  { (string.as(:generic_option) >> newline >> 
                             space?).repeat }
   rule(:newline)          { str("\n") }
@@ -58,9 +58,9 @@ class Pool_Parser < Parslet::Parser
 
   rule(:pool_stanza)      { begin_pool.present? >> (str('pool ') >> word.as(:name) >> 
                             space? >> str("{") >> space >> pool_options >> str("}")).as(:pool_stanza) >> newline.maybe }
-  rule(:member)           { (str('member ') >> word.as(:pool_member)) }
+  rule(:member)           { (str('member ') >> word.as(:pool_member) >> string.maybe) }
 
-  rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat }
+  rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat.maybe }
 
   rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
@@ -149,55 +149,84 @@ class BIGIP_Parser
     vip.deep_find(:snatpool).to_s
   end
 
-  def build vip
+  def pool_name vip
+    vip.deep_find(:pool).to_s
+  end
+
+  def snat_type
+    type = vip.deep_find(:ip_protocol).to_s
+    if protocol == "tcp"
+      "SNAT_TYPE_"
+    else
+      "SNAT_TYPE_NONE"
+    end
+  end
+
+  def pool_members(pools, pool_name)
+    members = []
+    pools.each do |pool|
+      pool[:pool_stanza].each do |x|
+        a = x.values_at(:name) if !x.values_at(:name).empty? 
+        name = a[0].to_s.strip
+        if name == pool_name 
+          pool[:pool_stanza].each do |x|
+            member = x.values_at(:pool_member)[0].to_s 
+            if ! member.empty?
+              members << member
+            end
+          end
+        end
+      end
+    end
     output = []
-    host   = @filename.gsub('')
-    output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << profile(vip) << type(vip) << protocol(vip) << state(vip)
+    members.each do |member|
+      output << member.to_s.split(':')[0] << member.to_s.split(':')[1]
+    end
+    output
   end
-end
 
-def snatpool_members(snatpools, snatpool_name)
-  members = []
-  snatpools.each do |snatpool|
-    snatpool[:snatpool_stanza].each do |x|
-      a = x.values_at(:name) if !x.values_at(:name).empty? 
-      name = a[0].to_s.strip
-      if name == snatpool_name 
-        snatpool[:snatpool_stanza].each do |x|
-          member = x.values_at(:snatpool_member)[0].to_s 
-          if ! member.empty?
-            members << member
+  def snatpool_members(snatpools, snatpool_name)
+    members = []
+    snatpools.each do |snatpool|
+      snatpool[:snatpool_stanza].each do |x|
+        a = x.values_at(:name) if !x.values_at(:name).empty? 
+        name = a[0].to_s.strip
+        if name == snatpool_name 
+          snatpool[:snatpool_stanza].each do |x|
+            member = x.values_at(:snatpool_member)[0].to_s 
+            if ! member.empty?
+              members << member
+            end
           end
         end
       end
     end
+    members
   end
-  members
+
+  def build
+    final_output = []
+    @vips.each do |vip|
+      output = []
+      output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
+      port(vip) << pool_name(vip) << pool_members(@pools, pool_name(vip)) << 
+      snatpool(vip) << snatpool_members(@snatpools, snatpool(vip))
+
+      final_output << output
+    end
+    final_output.map { |x| x.flatten }
+  end
 end
 
-def pool_members(pools, pool_name)
-  members = []
-  pools.each do |pool|
-    pool[:pool_stanza].each do |x|
-      a = x.values_at(:name) if !x.values_at(:name).empty? 
-      name = a[0].to_s.strip
-      if name == pool_name 
-        snatpool[:pool_stanza].each do |x|
-          member = x.values_at(:pool_member)[0].to_s 
-          if ! member.empty?
-            members << member
-          end
-        end
-      end
-    end
-  end
-  members
-end
 
 config    = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
 virtuals  = config.parse_virtuals
-pp pools     = config.parse_pools
+pools     = config.parse_pools
 snatpools = config.parse_snatpools
 
-# pp pool_members(pools, "FTPLDN012_21_pool")
+output_filename = "output.csv"
+output_file     = File.open(output_filename, "w")
 
+config.build.each do |line|
+  output_file.puts line.to_csv
+end

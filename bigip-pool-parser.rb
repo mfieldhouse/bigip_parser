@@ -4,57 +4,6 @@ require 'hashie'
 require 'pp'
 require 'csv'
 
-class BIGIP_v9_Parser < Parslet::Parser
-  root(:config)
-  rule(:config)           { (virtual_address | virtual | pool_stanza | 
-                            snatpool_stanza | ignore).repeat }
-
-  rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> virtual_options >> 
-                            str("}")) >> newline.maybe }
-
-  # BEGIN virtual server
-  rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> virtual_options >> 
-                            str("}")).as(:virtual_server) >> newline.maybe }
-  rule(:destination)      { (str('destination ') >> string.as(:destination)) }
-  rule(:mask)             { (str('mask ') >> word.as(:mask)) }
-  rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
-  rule(:pool)             { (str('pool ') >> string.as(:pool)) }
-  # END virtual server
-
-  # BEGIN snatpool
-  rule(:snatpool_stanza)  { (str('snatpool ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> snatpool_options >> 
-                            str("}")).as(:snatpool_stanza) >> newline.maybe }
-  rule(:snatpool_member)  { (str('member ') >> word.as(:snatpool_member)) }
-  # END snatpool
-
-  # BEGIN pool
-  rule(:pool_stanza)      { (str('pool ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> pool_options >> 
-                            str("}")).as(:pool_stanza) >> newline.maybe }
-  rule(:pool_member)      { (str('member ') >> word.as(:pool_member)) }
-  # END pool
-
-
-
-  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >>                        newline.maybe).repeat(1) }
-
-
-  # rule(:lines)            { line.repeat }
-  rule(:virtual_options)  { ((destination | mask | pool | snatpool | 
-                            string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:pool_options)     { ((pool_member | string.as(:generic_option)) >>  newline >> space?).repeat }
-  rule(:snatpool_options) { ((snatpool_member | string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
-  rule(:newline)          { str("\n") }
-  rule(:space)            { match('\s').repeat(1) }
-  rule(:space?)           { space.maybe }
-  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
-  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
-end
-
 class Virtual_Parser < Parslet::Parser
   root(:config)
   rule(:config)           { (virtual_address | virtual | ignore).repeat }
@@ -86,20 +35,34 @@ class Snatpool_Parser < Parslet::Parser
   root(:config)
   rule(:config)           { (snatpool_stanza | ignore).repeat }
 
-  # BEGIN snatpool
+  rule(:begin_snatpool )  { (str('snatpool ') >> word.as(:name) >> space? >> str("{")) }
+
   rule(:snatpool_stanza)  { begin_snatpool.present? >> (str('snatpool ') >> word.as(:name) >> 
                             space? >> str("{") >> space >> snatpool_member >> str("}")).as(:snatpool_stanza) >> newline.maybe }
   rule(:snatpool_member)  { ((str('member ') >> word.as(:snatpool_member)) >> newline >> space?).repeat.maybe }
-  # END snatpool
-
-  rule(:begin_snatpool )  { (str('snatpool ') >> word.as(:name) >> space? >> str("{")) }
 
   rule(:ignore)           { (begin_snatpool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
-  rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:pool_options)     { ((pool_member | string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:snatpool_options) { ((snatpool_member | string.as(:generic_option)) >> newline >> space?).repeat }
-  rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
+  rule(:newline)          { str("\n") }
+  rule(:space)            { match('\s').repeat(1) }
+  rule(:space?)           { space.maybe }
+  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
+  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
+end
+
+class Pool_Parser < Parslet::Parser
+  root(:config)
+  rule(:config)           { (pool_stanza | ignore).repeat }
+
+  rule(:begin_pool )      { (str('pool ') >> word.as(:name) >> space? >> str("{")) }
+
+  rule(:pool_stanza)      { begin_pool.present? >> (str('pool ') >> word.as(:name) >> 
+                            space? >> str("{") >> space >> pool_member | generic_options >> str("}")).as(:pool_stanza) >> newline.maybe }
+  rule(:pool_member)      { ((str('member ') >> word.as(:pool_member)) >> newline >> space?).repeat.maybe }
+
+  rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+
+  rule(:generic_options) { (string.as(:generic_option) >> newline >> space?).repeat }
   rule(:newline)          { str("\n") }
   rule(:space)            { match('\s').repeat(1) }
   rule(:space?)           { space.maybe }
@@ -116,7 +79,7 @@ class BIGIP_Parser
     @config = File.read(config_filename)
   end
 
-  def parse_vips
+  def parse_virtuals
     @vips = Virtual_Parser.new.parse_with_debug(@config)
     @vips = @vips.map { |x| x.extend Hashie::Extensions::DeepFind }
     self.vips
@@ -126,6 +89,11 @@ class BIGIP_Parser
     @snatpools = Snatpool_Parser.new.parse_with_debug(@config)
     @snatpools = @snatpools.map { |x| x.extend Hashie::Extensions::DeepFind }
     self.snatpools
+  end
+
+  def parse_pools
+    @pools = Pool_Parser.new.parse_with_debug(@config)
+    @pools = @pools.map { |x| x.extend Hashie::Extensions::DeepFind }
   end
 
   def name vip
@@ -206,6 +174,8 @@ def snatpool_members(snatpools, snatpool_name)
   members
 end
 
-config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
+config    = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
 snatpools = config.parse_snatpools
-pp snatpool_members(snatpools,"sws-ldn-credit-5nc_snat")
+virtuals  = config.parse_virtuals
+pools     = config.parse_pools
+

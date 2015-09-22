@@ -57,12 +57,11 @@ class Pool_Parser < Parslet::Parser
   rule(:begin_pool )      { (str('pool ') >> word.as(:name) >> space? >> str("{")) }
 
   rule(:pool_stanza)      { begin_pool.present? >> (str('pool ') >> word.as(:name) >> 
-                            space? >> str("{") >> space >> pool_member | generic_options >> str("}")).as(:pool_stanza) >> newline.maybe }
+                            space? >> str("{") >> space >> pool_member >> str("}")).as(:pool_stanza) >> newline.maybe }
   rule(:pool_member)      { ((str('member ') >> word.as(:pool_member)) >> newline >> space?).repeat.maybe }
 
   rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
-  rule(:generic_options) { (string.as(:generic_option) >> newline >> space?).repeat }
   rule(:newline)          { str("\n") }
   rule(:space)            { match('\s').repeat(1) }
   rule(:space?)           { space.maybe }
@@ -174,8 +173,29 @@ def snatpool_members(snatpools, snatpool_name)
   members
 end
 
+def pool_members(pools, pool_name)
+  members = []
+  pools.each do |pool|
+    pool[:pool_stanza].each do |x|
+      a = x.values_at(:name) if !x.values_at(:name).empty? 
+      name = a[0].to_s.strip
+      if name == pool_name 
+        snatpool[:pool_stanza].each do |x|
+          member = x.values_at(:pool_member)[0].to_s 
+          if ! member.empty?
+            members << member
+          end
+        end
+      end
+    end
+  end
+  members
+end
+
 config    = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
-snatpools = config.parse_snatpools
 virtuals  = config.parse_virtuals
-pools     = config.parse_pools
+pp pools     = config.parse_pools
+snatpools = config.parse_snatpools
+
+# pp pool_members(pools, "FTPLDN012_21_pool")
 

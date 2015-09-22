@@ -108,7 +108,7 @@ class Snatpool_Parser < Parslet::Parser
 end
 
 class BIGIP_Parser
-  attr_accessor :config, :parse, :name
+  attr_accessor :vips, :snatpools
   @output = []
 
   def initialize(config_filename)
@@ -117,17 +117,15 @@ class BIGIP_Parser
   end
 
   def parse_vips
-    @vips      = Virtual_Parser.new.parse_with_debug(@config)
-    @snatpools = Snatpool_Parser.new.parse_with_debug(@config)
-    pp @snatpools
-    @vips = @vips.map { |vip| vip.extend Hashie::Extensions::DeepFind }
-    @snatpool_list = []
-    @vips.each { |vip| @snatpool_list << snatpool(vip) }
-    @snatpool_list
+    @vips = Virtual_Parser.new.parse_with_debug(@config)
+    @vips = @vips.map { |x| x.extend Hashie::Extensions::DeepFind }
+    self.vips
   end
 
-  def count
-    @count = @vips.count
+  def parse_snatpools
+    @snatpools = Snatpool_Parser.new.parse_with_debug(@config)
+    @snatpools = @snatpools.map { |x| x.extend Hashie::Extensions::DeepFind }
+    self.snatpools
   end
 
   def name vip
@@ -189,8 +187,61 @@ class BIGIP_Parser
   end
 end
 
+def snatpool_name x
+  x[:snatpool_stanza][0][:name].to_s.gsub(' ', '')
+end
+
+def vip_snatpool_name vip
+  name = vip.deep_find(:snatpool).to_s.gsub(' ', '')
+end
+
 config = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
-pp config.parse_vips
+
+# out = config.parse_snatpools
+# pp Transformer.new.apply(out)
+
+# Get snatpool name from snatpool
+# config.parse_snatpools.each { |x| snatpool_name(x) }
+
+# Get snatpool name from virtual
+# config.parse_vips.each do |vip|
+#   snatpool_name = vip_snatpool_name(vip)
+#   puts snatpool_name
+
+config.parse_snatpools.each do |snatpool|
+  snatpool_members = []
+  snatpool[:snatpool_stanza].each do |x|
+    a = x.values_at(:name) if !x.values_at(:name).empty? 
+    name = a[0].to_s.strip
+    if name == "FTPLDN042_snat" 
+      snatpool[:snatpool_stanza].each do |x|
+        member = x.values_at(:snatpool_member)[0].to_s 
+        if ! member.empty?
+          snatpool_members << member
+        end
+      end
+    end
+  end
+  pp snatpool_members
+end
+
+
+
+# pp config.parse_snatpools[0][:snatpool_stanza].each { |x| puts x.values_at(:snatpool_member)  }
+
+
+
+# config.parse_snatpools.each do |snatpool|
+#  snatpool[:snatpool_stanza].each { |x| pp x.values_at(:snatpool_member)[0].to_s }
+#   end
+
+# snatpools = config.snatpools
+
+# snatpools.each { |x| pp snatpool_name(x) }
+
+
+
+# snatpools.each { |x| puts x[:snatpool_stanza][1]}
 
 # output_filename = "output.csv"
 # output_file     = File.open(output_filename, "w")

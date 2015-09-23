@@ -20,7 +20,7 @@ class Virtual_Parser < BIGIP_Parser
   rule(:begin_virtual )   { (str('virtual ') >> word.as(:name) >> space >> str("{")) }
 
   rule(:virtual)          { begin_virtual.present? >> (begin_virtual >> 
-                            space >> virtual_options >> str("}")).as(:virtual_server) >> newline }
+                            space >> virtual_options >> str("}")).as(:virtual_server) }
   rule(:virtual_options)  { ((destination | mask | pool | snatpool | generic_option) >> newline >> space?).repeat }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
   rule(:mask)             { (str('mask ') >> word.as(:mask)) }

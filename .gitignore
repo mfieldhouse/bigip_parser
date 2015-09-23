@@ -1,4 +1,4 @@
-# Ignore everything
+# Ignore input and output directories
 
 input/
 output/

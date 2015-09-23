@@ -15,12 +15,11 @@ end
 
 class Virtual_Parser < BIGIP_Parser
   root(:config)
-  rule(:config)           { (virtual_address | virtual | ignore).repeat }
+  rule(:config)           { (virtual | ignore).repeat }
 
-  rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
-                            space? >> str("{") >> space >> virtual_options >> str("}")) >> newline.maybe }
+  rule(:begin_virtual )   { (str('virtual ') >> word.as(:name) >> space? >> str("{")) }
 
-  rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
+  rule(:virtual)          { begin_virtual.present? >> (str('virtual ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> virtual_options >> str("}")).as(:virtual_server) >> newline.maybe }
   rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
@@ -28,7 +27,7 @@ class Virtual_Parser < BIGIP_Parser
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
 
-  rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+  rule(:ignore)           { (begin_virtual.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 end
 
 class Snatpool_Parser < BIGIP_Parser
@@ -39,7 +38,6 @@ class Snatpool_Parser < BIGIP_Parser
   rule(:snatpool_stanza)  { begin_snatpool.present? >> (str('snatpool ') >> word.as(:name) >> 
                             space? >> str("{") >> space >> snatpool_member >> str("}")).as(:snatpool_stanza) >> newline.maybe }
   rule(:snatpool_member)  { ((str('member ') >> word.as(:snatpool_member)) >> newline >> space?).repeat.maybe }
-
   rule(:ignore)           { (begin_snatpool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 end
 
@@ -52,9 +50,8 @@ class Pool_Parser < BIGIP_Parser
                             space? >> str("{") >> space >> pool_options >> str("}")).as(:pool_stanza) >> newline.maybe }
   rule(:member)           { (str('member ') >> word.as(:pool_member) >> string.maybe) }
   rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat.maybe }
-  rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
-  
+  rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 end
 
 class BIGIP_Audit
@@ -206,8 +203,9 @@ end
 
 
 config    = BIGIP_Audit.new('LDVSF4CS04_v9_bigip.conf')
-# pp virtuals  = config.parse_virtuals
-pp pools     = config.parse_pools
+pp virtuals  = config.parse_virtuals.count
+
+# pp pools     = config.parse_pools
 # pp snatpools = config.parse_snatpools
 
 # output_filename = "output.csv"

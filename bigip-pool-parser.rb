@@ -9,7 +9,7 @@ class BIGIP_Parser < Parslet::Parser
   rule(:space)            { match('\s').repeat(1) }
   rule(:space?)           { space.maybe }
   rule(:string)           { (word >> str(" ").maybe).repeat(1)}
-  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe }
+  rule(:word)             { match('[\w!-:=]').repeat(1) }
   rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
 end
 

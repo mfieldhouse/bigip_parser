@@ -4,14 +4,22 @@ require 'hashie'
 require 'pp'
 require 'csv'
 
-class Virtual_Parser < Parslet::Parser
+class BIGIP_Parser < Parslet::Parser
+  rule(:newline)          { str("\n") }
+  rule(:space)            { match('\s').repeat(1) }
+  rule(:space?)           { space.maybe }
+  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
+  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe }
+  rule(:generic_options)  { (string.as(:generic_option) >> newline >> space?).repeat }
+end
+
+class Virtual_Parser < BIGIP_Parser
   root(:config)
   rule(:config)           { (virtual_address | virtual | ignore).repeat }
 
   rule(:virtual_address)  { (str('virtual address ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> virtual_options >> str("}")) >> newline.maybe }
 
-  # BEGIN virtual server
   rule(:virtual)          { (str('virtual ') >> word.as(:name).repeat.maybe >> 
                             space? >> str("{") >> space >> virtual_options >> str("}")).as(:virtual_server) >> newline.maybe }
   rule(:virtual_options)  { ((destination | mask | pool | snatpool | string.as(:generic_option)) >> newline >> space?).repeat }
@@ -19,59 +27,37 @@ class Virtual_Parser < Parslet::Parser
   rule(:mask)             { (str('mask ') >> word.as(:mask)) }
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
-  # END virtual server
 
   rule(:ignore)           { (str('virtual').absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
-  rule(:generic_options)  { (string.as(:generic_option) >> newline >> 
-                            space?).repeat }
-  rule(:newline)          { str("\n") }
-  rule(:space)            { match('\s').repeat(1) }
-  rule(:space?)           { space.maybe }
-  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
-  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
 end
 
-class Snatpool_Parser < Parslet::Parser
+class Snatpool_Parser < BIGIP_Parser
   root(:config)
   rule(:config)           { (snatpool_stanza | ignore).repeat }
 
   rule(:begin_snatpool )  { (str('snatpool ') >> word.as(:name) >> space? >> str("{")) }
-
   rule(:snatpool_stanza)  { begin_snatpool.present? >> (str('snatpool ') >> word.as(:name) >> 
                             space? >> str("{") >> space >> snatpool_member >> str("}")).as(:snatpool_stanza) >> newline.maybe }
   rule(:snatpool_member)  { ((str('member ') >> word.as(:snatpool_member)) >> newline >> space?).repeat.maybe }
 
   rule(:ignore)           { (begin_snatpool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
-
-  rule(:newline)          { str("\n") }
-  rule(:space)            { match('\s').repeat(1) }
-  rule(:space?)           { space.maybe }
-  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
-  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
 end
 
-class Pool_Parser < Parslet::Parser
+class Pool_Parser < BIGIP_Parser
   root(:config)
   rule(:config)           { (pool_stanza | ignore).repeat }
 
   rule(:begin_pool )      { (str('pool ') >> word.as(:name) >> space? >> str("{")) }
-
   rule(:pool_stanza)      { begin_pool.present? >> (str('pool ') >> word.as(:name) >> 
                             space? >> str("{") >> space >> pool_options >> str("}")).as(:pool_stanza) >> newline.maybe }
   rule(:member)           { (str('member ') >> word.as(:pool_member) >> string.maybe) }
-
   rule(:pool_options)     { ((member | string.as(:generic_option)) >> newline >> space?).repeat.maybe }
-
   rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
 
-  rule(:newline)          { str("\n") }
-  rule(:space)            { match('\s').repeat(1) }
-  rule(:space?)           { space.maybe }
-  rule(:string)           { (word >> str(" ").maybe).repeat(1)}
-  rule(:word)             { match('[\w!-:=]').repeat(1) >> str(" ").maybe } 
+  
 end
 
-class BIGIP_Parser
+class BIGIP_Audit
   attr_accessor :vips, :snatpools
   @output = []
 
@@ -219,14 +205,14 @@ class BIGIP_Parser
 end
 
 
-config    = BIGIP_Parser.new('LDVSF4CS04_v9_bigip.conf')
-virtuals  = config.parse_virtuals
-pools     = config.parse_pools
-snatpools = config.parse_snatpools
+config    = BIGIP_Audit.new('LDVSF4CS04_v9_bigip.conf')
+# pp virtuals  = config.parse_virtuals
+pp pools     = config.parse_pools
+# pp snatpools = config.parse_snatpools
 
-output_filename = "output.csv"
-output_file     = File.open(output_filename, "w")
+# output_filename = "output.csv"
+# output_file     = File.open(output_filename, "w")
 
-config.build.each do |line|
-  output_file.puts line.to_csv
-end
+# config.build.each do |line|
+#   output_file.puts line.to_csv
+# end

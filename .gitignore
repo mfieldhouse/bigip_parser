@@ -1,10 +1,4 @@
 # Ignore everything
 
-*
-
-# But not these files
-
-bin
-lib
-README.md
-.gitignore
+input/
+output/

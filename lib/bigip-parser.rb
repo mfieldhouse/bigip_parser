@@ -161,11 +161,7 @@ class BIGIP_Audit
         end
       end
     end
-    output = []
-    members.each do |member|
-      output << member.to_s.split(':')[0] << member.to_s.split(':')[1]
-    end
-    output
+    members
   end
 
   def snatpool_members(snatpools, snatpool_name)
@@ -190,12 +186,22 @@ class BIGIP_Audit
   def build
     final_output = []
     @vips.each do |vip|
-      output = []
-      output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
-      port(vip) << pool_name(vip) << pool_members(@pools, pool_name(vip)) << 
-      snatpool(vip) << snatpool_members(@snatpools, snatpool(vip))
+      pool_members     = pool_members(@pools, pool_name(vip))
+      snatpool_members = snatpool_members(@snatpools, snatpool(vip))
 
-      final_output << output
+      pool_members.each do |member|
+        output = []
+        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
+        port(vip) << pool_name(vip) << member.to_s.split(':')[0] << member.to_s.split(':')[1]
+        final_output << output
+      end
+
+      snatpool_members.each do |member|
+        output = []
+        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
+        port(vip) << "" << "" << "" << snatpool(vip) << member
+        final_output << output
+      end
     end
     final_output.map { |x| x.flatten }
   end

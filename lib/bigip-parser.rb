@@ -27,7 +27,7 @@ class Virtual_Parser < BIGIP_Parser
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
 
-  rule(:ignore)           { (begin_virtual.absent? >> any.as(:generic_line)).repeat(1) }
+  rule(:ignore)           { (begin_virtual.absent? >> any).repeat(1) }
 end
 
 class Snatpool_Parser < BIGIP_Parser
@@ -38,7 +38,7 @@ class Snatpool_Parser < BIGIP_Parser
   rule(:snatpool_stanza)  { begin_snatpool.present? >> (begin_snatpool >> space >> 
                             snatpool_member >> str("}")).as(:snatpool_stanza) >> newline }
   rule(:snatpool_member)  { ((str('member ') >> word.as(:snatpool_member)) >> newline >> space?).repeat }
-  rule(:ignore)           { (begin_snatpool.absent? >> any.as(:generic_line)).repeat(1) }
+  rule(:ignore)           { (begin_snatpool.absent? >> any).repeat(1) }
 end
 
 class Pool_Parser < BIGIP_Parser
@@ -51,11 +51,11 @@ class Pool_Parser < BIGIP_Parser
   rule(:member)           { (str('member ') >> word.as(:pool_member) >> string.maybe) }
   rule(:pool_options)     { ((member | generic_option) >> newline >> space?).repeat.maybe }
 
-  rule(:ignore)           { (begin_pool.absent? >> any.as(:generic_line) >> newline.maybe).repeat(1) }
+  rule(:ignore)           { (begin_pool.absent? >> any >> newline.maybe).repeat(1) }
 end
 
 class BIGIP_Audit
-  attr_accessor :vips, :snatpools
+  attr_accessor :vips, :snatpools, :config
   @output = []
 
   def initialize(config_filename)
@@ -186,21 +186,31 @@ class BIGIP_Audit
   def build
     final_output = []
     @vips.each do |vip|
-      pool_members     = pool_members(@pools, pool_name(vip))
-      snatpool_members = snatpool_members(@snatpools, snatpool(vip))
 
-      pool_members.each do |member|
+      if pool_name(vip) == ""
         output = []
-        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
-        port(vip) << pool_name(vip) << member.to_s.split(':')[0] << member.to_s.split(':')[1]
+        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip)
         final_output << output
       end
 
-      snatpool_members.each do |member|
-        output = []
-        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
-        port(vip) << "" << "" << "" << snatpool(vip) << member
-        final_output << output
+      unless pool_name(vip) == ""
+        pool_members = pool_members(@pools, pool_name(vip))
+        pool_members.each do |member|
+          output = []
+          output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
+          port(vip) << pool_name(vip) << member.to_s.split(':')[0] << member.to_s.split(':')[1]
+          final_output << output
+        end
+      end
+
+      unless snatpool(vip) == ""
+        snatpool_members = snatpool_members(@snatpools, snatpool(vip))
+        snatpool_members.each do |member|
+          output = []
+          output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
+          port(vip) << "" << "" << "" << snatpool(vip) << member
+          final_output << output
+        end
       end
     end
     final_output.map { |x| x.flatten }

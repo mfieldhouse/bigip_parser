@@ -21,11 +21,12 @@ class Virtual_Parser < BIGIP_Parser
 
   rule(:virtual)          { begin_virtual.present? >> (begin_virtual >> 
                             space >> virtual_options >> str("}")).as(:virtual_server) }
-  rule(:virtual_options)  { ((destination | mask | pool | snatpool | generic_option) >> newline >> space?).repeat }
+  rule(:virtual_options)  { ((destination | mask | pool | snatpool | snat_automap | generic_option) >> newline >> space?).repeat }
   rule(:destination)      { (str('destination ') >> string.as(:destination)) }
   rule(:mask)             { (str('mask ') >> word.as(:mask)) }
   rule(:snatpool)         { (str('snatpool ') >> string.as(:snatpool)) }
   rule(:pool)             { (str('pool ') >> string.as(:pool)) }
+  rule(:snat_automap)     { str('snat autommap').as(:snat_automap)}
 
   rule(:ignore)           { (begin_virtual.absent? >> any).repeat(1) }
 end
@@ -136,12 +137,12 @@ class BIGIP_Audit
     vip.deep_find(:pool).to_s
   end
 
-  def snat_type
-    type = vip.deep_find(:ip_protocol).to_s
-    if protocol == "tcp"
-      "SNAT_TYPE_"
-    else
+  def snat_type vip
+    type = vip.deep_find(:snatpool).to_s
+    if type == ""
       "SNAT_TYPE_NONE"
+    else
+      "SNAT_TYPE_SNATPOOL"
     end
   end
 
@@ -183,13 +184,24 @@ class BIGIP_Audit
     members
   end
 
-  def build
+  def vip_analysis
+    final_output = []
+    @vips.each do |vip|
+      output = []
+      host   = @filename.gsub('')
+      output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << type(vip) << protocol(vip) << state(vip)
+      final_output << output
+    end
+    final_output
+  end
+
+  def pool_analysis
     final_output = []
     @vips.each do |vip|
 
       if pool_name(vip) == ""
         output = []
-        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip)
+        output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << port(vip) << snat_type(vip)
         final_output << output
       end
 
@@ -198,7 +210,7 @@ class BIGIP_Audit
         pool_members.each do |member|
           output = []
           output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
-          port(vip) << pool_name(vip) << member.to_s.split(':')[0] << member.to_s.split(':')[1]
+          port(vip) << pool_name(vip) << member.to_s.split(':')[0] << member.to_s.split(':')[1] << snat_type(vip)
           final_output << output
         end
       end
@@ -208,7 +220,7 @@ class BIGIP_Audit
         snatpool_members.each do |member|
           output = []
           output << "LDVSF4CS04" << name(vip) << ip(vip) << mask(vip) << 
-          port(vip) << "" << "" << "" << snatpool(vip) << member
+          port(vip) << "" << "" << "" << snat_type(vip) << snatpool(vip) << member
           final_output << output
         end
       end

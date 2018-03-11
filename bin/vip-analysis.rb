@@ -1,6 +1,6 @@
 require_relative '../lib/bigip-parser'
 
-config    = BIGIP_Audit.new('../input/LDVSF4CS04-v9.conf')
+config    = BIGIP_Audit.new('../input/bigip.conf')
 config.parse_virtuals
 
 output_filename = "../output/vip-analysis.csv"

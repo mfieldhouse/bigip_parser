@@ -1,6 +1,6 @@
 require_relative '../lib/bigip-parser'
 
-config    = BIGIP_Audit.new('../input/LDVSF4CS04-v9.conf')
+config    = BIGIP_Audit.new('../input/bigip.conf')
 config.parse_virtuals
 config.parse_pools
 config.parse_snatpools
